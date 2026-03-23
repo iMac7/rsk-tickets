@@ -27,7 +27,6 @@ contract TicketsTest {
     ticketShop = new TicketShop(
       "RSK Summit",
       block.timestamp + EVENT_OFFSET,
-      "ipfs://rsk-summit",
       TICKET_PRICE
     );
 
@@ -39,7 +38,6 @@ contract TicketsTest {
     address deployedAddress = factory.deployTicketShop(
       "Random rsk event",
       block.timestamp + 10 days,
-      "ipfs://rsk-stuff",
       0.1 ether
     );
 
@@ -51,11 +49,6 @@ contract TicketsTest {
       "unexpected event name"
     );
     require(deployedTicketShop.price() == 0.1 ether, "unexpected ticket price");
-    require(
-      keccak256(bytes(deployedTicketShop.metadataUri())) ==
-        keccak256(bytes("ipfs://rsk-stuff")),
-      "unexpected metadata uri"
-    );
   }
 
   function test_QueuedPurchaseCanBeFinalizedAtEventStart() public {

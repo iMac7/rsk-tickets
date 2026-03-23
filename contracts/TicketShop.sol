@@ -25,7 +25,6 @@ contract TicketShop {
   }
 
   string public name;
-  string public metadataUri;
   uint256 public immutable eventDate;
   uint256 public immutable price;
   uint256 public nextPurchaseId;
@@ -44,14 +43,12 @@ contract TicketShop {
   constructor(
     string memory eventName,
     uint256 eventTimestamp,
-    string memory eventMetadataUri,
     uint256 ticketPrice
   ) {
     if (eventTimestamp <= block.timestamp) revert EventDateMustBeInTheFuture();
 
     name = eventName;
     eventDate = eventTimestamp;
-    metadataUri = eventMetadataUri;
     price = ticketPrice;
   }
 
