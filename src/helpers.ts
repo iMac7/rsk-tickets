@@ -2,12 +2,14 @@ import { BrowserProvider, Contract, Interface, JsonRpcProvider, Wallet, formatEt
 
 const FACTORY_ADDRESS = import.meta.env.VITE_FACTORY_ADDRESS?.trim();
 const TESTNET_RPC_URL = import.meta.env.VITE_TESTNET_RPC_URL?.trim();
+const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL?.trim();
 const LOCAL_RPC_URL = import.meta.env.VITE_LOCAL_RPC_URL?.trim() || "http://127.0.0.1:8545";
 const LOCAL_PRIVATE_KEY =
   import.meta.env.VITE_LOCAL_PRIVATE_KEY?.trim() ||
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const USE_LOCAL_SIGNER = !TESTNET_RPC_URL;
 const READ_RPC_URL = TESTNET_RPC_URL || LOCAL_RPC_URL;
+const USE_SUBGRAPH = Boolean(!USE_LOCAL_SIGNER && SUBGRAPH_URL);
 
 const factoryAbi = [
   "event TicketShopDeployed(address indexed ticketShop, address indexed creator, string name, uint256 eventDate, uint256 price)",
@@ -55,6 +57,9 @@ type Shop = {
   name: string;
   eventDate: bigint;
   price: bigint;
+  ticketsSold?: number;
+  activeTickets?: bigint;
+  availablePurchaseIds?: string[];
 };
 
 declare global {
@@ -74,6 +79,7 @@ const state = {
 export async function initApp() {
   const factoryAddressNode = document.querySelector<HTMLDivElement>("#factoryAddress");
   const rpcUrlNode = document.querySelector<HTMLDivElement>("#rpcUrl");
+  const subgraphUrlNode = document.querySelector<HTMLDivElement>("#subgraphUrl");
   const accountNode = document.querySelector<HTMLDivElement>("#account");
   const validationNode = document.querySelector<HTMLDivElement>("#validation");
   const shopsNode = document.querySelector<HTMLDivElement>("#shops");
@@ -81,7 +87,7 @@ export async function initApp() {
   const refreshButton = document.querySelector<HTMLButtonElement>("#refresh");
   const deployForm = document.querySelector<HTMLFormElement>("#deployForm");
 
-  if (!factoryAddressNode || !rpcUrlNode || !accountNode || !validationNode || !shopsNode || !connectButton || !refreshButton || !deployForm) {
+  if (!factoryAddressNode || !rpcUrlNode || !subgraphUrlNode || !accountNode || !validationNode || !shopsNode || !connectButton || !refreshButton || !deployForm) {
     throw new Error("Missing app elements.");
   }
 
@@ -100,6 +106,7 @@ export async function initApp() {
 
   factoryAddressNode.textContent = FACTORY_ADDRESS || "Missing VITE_FACTORY_ADDRESS";
   rpcUrlNode.textContent = READ_RPC_URL;
+  subgraphUrlNode.textContent = USE_SUBGRAPH ? SUBGRAPH_URL! : "Disabled";
   connectButton.textContent = USE_LOCAL_SIGNER ? "Local signer active" : "Connect wallet";
   connectButton.hidden = USE_LOCAL_SIGNER;
 
@@ -134,9 +141,7 @@ export async function initApp() {
     const eventDateValue = new Date(year, month - 1, day, hours, minutes, 0, 0);
     const eventTimestamp = eventDateValue.getTime();
 
-    if (
-      Number.isNaN(eventTimestamp)
-    ) {
+    if (Number.isNaN(eventTimestamp)) {
       setValidation("Enter a valid event date and time.");
       return;
     }
@@ -150,17 +155,14 @@ export async function initApp() {
 
     await runAction(
       async () => {
-        console.log('before factory');
-        
+        if (!USE_LOCAL_SIGNER) {
+          await connectWallet(accountNode);
+        }
+
         const factory = await getFactory(true);
-        console.log('factory= ', factory, );
-        
         const tx = await factory.deployTicketShop(name, Math.floor(eventTimestamp / 1000), parseEther(price));
-        console.log('tx= ', tx, 'timestamp= ', eventTimestamp, tx.hash)
 
         await tx.wait();
-        console.log('after wait');
-        
 
         deployForm.reset();
         setValidation();
@@ -223,6 +225,16 @@ async function initializeAccount(accountNode: HTMLDivElement) {
     return;
   }
 
+  if (window.ethereum) {
+    try {
+      const provider = await getWalletProvider();
+      const accounts = (await provider.send("eth_accounts", [])) as string[];
+      state.account = String(accounts[0] || "");
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   accountNode.textContent = state.account || "Not connected";
 }
 
@@ -249,6 +261,12 @@ async function loadShops(shopsNode: HTMLDivElement) {
     return;
   }
 
+  if (USE_SUBGRAPH) {
+    state.shops = await loadShopsFromSubgraph();
+    await renderShops(shopsNode);
+    return;
+  }
+
   const factory = await getFactory();
   const addresses = (await factory.getTicketShops()) as string[];
   const provider = getReadProvider();
@@ -268,31 +286,11 @@ async function loadShops(shopsNode: HTMLDivElement) {
           name,
           eventDate,
           price,
+          ticketsSold: undefined,
         };
       }),
     )
-  )
-    .reverse();
-
-    console.log('shops=> ', state.shops);
-    //on my console,
-    //  shops=>  
-    // [{…}]
-    // 0
-    // : 
-    // address
-    // : 
-    // "0x5aB63294dE2F21a80030d65be030FB86D8Bc7baf"
-    // eventDate
-    // : 
-    // 1774429935n
-    // name
-    // : 
-    // "randomshop"
-    // price
-    // : 
-    // 10000n
-    
+  ).reverse();
 
   await renderShops(shopsNode);
 }
@@ -307,26 +305,36 @@ async function renderShops(shopsNode: HTMLDivElement) {
     return;
   }
 
-  const provider = getReadProvider();
-  const readonlyAccount = state.account || "0x0000000000000000000000000000000000000000";
-
   const details = await Promise.all(
     state.shops.map(async (shop) => {
       const derivedStateLabel = Number(shop.eventDate) * 1000 > Date.now() ? "Sales open" : "Event started";
 
+      if (USE_SUBGRAPH) {
+        return {
+          ...shop,
+          stateLabel: derivedStateLabel,
+          activeTickets: shop.activeTickets ?? 0n,
+          ticketsSold: shop.ticketsSold ?? 0,
+          availablePurchaseIds: shop.availablePurchaseIds ?? [],
+        };
+      }
+
+      const provider = getReadProvider();
+      const readonlyAccount = state.account || "0x0000000000000000000000000000000000000000";
+
       try {
         const contract = new Contract(shop.address, shopAbi, provider);
-        const [rawState, activeTickets, ticketsSold] = await Promise.all([
+        const [rawState, activeTickets] = await Promise.all([
           contract.state() as Promise<bigint>,
           contract.activeTickets(readonlyAccount) as Promise<bigint>,
-          getOpenTicketCount(contract),
         ]);
 
         return {
           ...shop,
           stateLabel: Number(rawState) === 0 ? "Sales open" : "Event started",
           activeTickets,
-          ticketsSold,
+          ticketsSold: shop.ticketsSold ?? 0,
+          availablePurchaseIds: [],
         };
       } catch (error) {
         console.error(`Failed to load shop details for ${shop.address}`, error);
@@ -335,7 +343,8 @@ async function renderShops(shopsNode: HTMLDivElement) {
           ...shop,
           stateLabel: derivedStateLabel,
           activeTickets: 0n,
-          ticketsSold: 0,
+          ticketsSold: shop.ticketsSold ?? 0,
+          availablePurchaseIds: [],
         };
       }
     }),
@@ -353,20 +362,27 @@ async function renderShops(shopsNode: HTMLDivElement) {
               </div>
               <p class="break-all text-xs text-stone-400">${shop.address}</p>
               <div class="grid gap-2 sm:grid-cols-2">
-                <div><span class="text-stone-500">Price:</span> ${formatEther(shop.price)}</div>
+                <div><span class="text-stone-500">Price:</span> ${formatEther(shop.price)} RBTC</div>
                 <div><span class="text-stone-500">Event:</span> ${new Date(Number(shop.eventDate) * 1000).toLocaleString()}</div>
                 <div><span class="text-stone-500">Tickets not cancelled:</span> ${shop.ticketsSold}</div>
                 <div><span class="text-stone-500">Your active tickets:</span> ${shop.activeTickets}</div>
               </div>
+              ${USE_SUBGRAPH && shop.availablePurchaseIds?.length
+                ? `<div><span class="text-stone-500">Your purchase IDs:</span> ${shop.availablePurchaseIds.join(", ")}</div>`
+                : ""}
             </div>
             <div class="grid w-full gap-3 lg:max-w-sm">
-              <button data-action="queue" data-address="${shop.address}" data-price="${shop.price}" class="bg-amber-300 px-4 py-3 font-semibold text-stone-950 transition hover:bg-amber-200">Buy ticket</button>
-              <div class="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <input data-purchase-id="${shop.address}" type="number" min="0" class="border border-white/10 bg-black/20 px-3 py-2 text-white outline-none focus:border-amber-400" placeholder="Purchase ID" />
-                <button data-action="execute" data-address="${shop.address}" class="border border-white/15 bg-white/5 px-4 py-3 font-semibold text-white transition hover:bg-white/10">Finalize</button>
+              <button data-action="queue" data-address="${shop.address}" data-price="${shop.price}" class="mb-3 bg-amber-300 px-4 py-3 font-semibold text-stone-950 transition hover:bg-amber-200">Buy ticket</button>
+              <div class="rounded border border-white/10 bg-black/15 p-3">
+                <div class="grid gap-2">
+                  <input data-purchase-id="${shop.address}" type="number" min="0" class="border border-white/10 bg-black/20 px-3 py-2 text-white outline-none focus:border-amber-400" placeholder="Purchase ID" />
+                  <div class="grid gap-2 sm:grid-cols-2">
+                    <button data-action="execute" data-address="${shop.address}" class="border border-white/15 bg-white/5 px-4 py-3 font-semibold text-white transition hover:bg-white/10">Finalize</button>
+                    <button data-action="cancel" data-address="${shop.address}" class="border border-red-400/20 bg-red-400/10 px-4 py-3 font-semibold text-red-100 transition hover:bg-red-400/20">Cancel purchase</button>
+                  </div>
+                </div>
               </div>
               <div data-action-error="${shop.address}" class="min-h-6 text-sm text-pink-400"></div>
-              <button data-action="cancel" data-address="${shop.address}" class="border border-red-400/20 bg-red-400/10 px-4 py-3 font-semibold text-red-100 transition hover:bg-red-400/20">Cancel purchase</button>
             </div>
           </div>
         </article>
@@ -413,6 +429,95 @@ async function renderShops(shopsNode: HTMLDivElement) {
   });
 }
 
+async function loadShopsFromSubgraph(): Promise<Shop[]> {
+  const response = await fetch(SUBGRAPH_URL!, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `
+        query TicketShops {
+          ticketShops(orderBy: createdAtTimestamp, orderDirection: desc) {
+            id
+            creator
+            name
+            eventDate
+            price
+          }
+          purchases(first: 1000, where: { refunded: false }) {
+            id
+            purchaseId
+            buyer
+            finalized
+            shop {
+              id
+            }
+          }
+        }
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load subgraph data: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      ticketShops?: Array<{
+        id: string;
+        creator: string;
+        name: string;
+        eventDate: string;
+        price: string;
+      }>;
+      purchases?: Array<{
+        id: string;
+        purchaseId: string;
+        buyer: string;
+        finalized: boolean;
+        shop: {
+          id: string;
+        };
+      }>;
+    };
+    errors?: Array<{ message?: string }>;
+  };
+
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0]?.message || "Subgraph query failed.");
+  }
+
+  const ticketsSoldByShop = new Map<string, number>();
+  const activeTicketsByShop = new Map<string, bigint>();
+  const availablePurchaseIdsByShop = new Map<string, string[]>();
+  const account = state.account.toLowerCase();
+  for (const purchase of payload.data?.purchases || []) {
+    const shopId = purchase.shop.id.toLowerCase();
+    ticketsSoldByShop.set(shopId, (ticketsSoldByShop.get(shopId) || 0) + 1);
+    if (account && purchase.buyer.toLowerCase() === account) {
+      const purchaseIds = availablePurchaseIdsByShop.get(shopId) || [];
+      purchaseIds.push(purchase.purchaseId);
+      availablePurchaseIdsByShop.set(shopId, purchaseIds);
+
+      if (purchase.finalized) {
+        activeTicketsByShop.set(shopId, (activeTicketsByShop.get(shopId) || 0n) + 1n);
+      }
+    }
+  }
+
+  return (payload.data?.ticketShops || []).map((shop) => ({
+    address: shop.id,
+    name: shop.name,
+    eventDate: BigInt(shop.eventDate),
+    price: BigInt(shop.price),
+    ticketsSold: ticketsSoldByShop.get(shop.id.toLowerCase()) || 0,
+    activeTickets: activeTicketsByShop.get(shop.id.toLowerCase()) || 0n,
+    availablePurchaseIds: availablePurchaseIdsByShop.get(shop.id.toLowerCase()) || [],
+  }));
+}
+
 async function callShop(address: string, action: (shop: Contract) => Promise<void>) {
   try {
     const signer = USE_LOCAL_SIGNER ? getLocalWallet() : await (await getWalletProvider()).getSigner();
@@ -426,15 +531,6 @@ async function callShop(address: string, action: (shop: Contract) => Promise<voi
     setActionError(address, getErrorMessage(error));
     console.error(error);
   }
-}
-
-async function getOpenTicketCount(shop: Contract) {
-  const [queuedLogs, refundedLogs] = await Promise.all([
-    shop.queryFilter(shop.filters.PurchaseQueued(), 0, "latest"),
-    shop.queryFilter(shop.filters.PurchaseRefunded(), 0, "latest"),
-  ]);
-
-  return queuedLogs.length - refundedLogs.length;
 }
 
 function escapeHtml(value: string) {
@@ -453,43 +549,43 @@ function clearActionError(address: string) {
 }
 
 function getErrorMessage(error: unknown) {
-  const candidates = collectErrorCandidates(error);
+  const customErrors = collectCustomErrors(error);
 
-  for (const candidate of candidates) {
-    const decoded = decodeCustomError(candidate);
+  for (const err of customErrors) {
+    const decoded = decodeCustomError(err);
     if (decoded) {
       return decoded;
     }
   }
 
-  for (const candidate of candidates) {
+  for (const err of customErrors) {
     if (
-      candidate &&
-      typeof candidate === "object" &&
-      "shortMessage" in candidate &&
-      typeof candidate.shortMessage === "string" &&
-      candidate.shortMessage !== "missing revert data"
+      err &&
+      typeof err === "object" &&
+      "shortMessage" in err &&
+      typeof err.shortMessage === "string" &&
+      err.shortMessage !== "missing revert data"
     ) {
-      return candidate.shortMessage;
+      return err.shortMessage;
     }
   }
 
-  for (const candidate of candidates) {
-    if (candidate instanceof Error && candidate.message && candidate.message !== "missing revert data") {
-      return candidate.message;
+  for (const err of customErrors) {
+    if (err instanceof Error && err.message && err.message !== "missing revert data") {
+      return err.message;
     }
   }
 
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate && candidate !== "missing revert data") {
-      return candidate;
+  for (const err of customErrors) {
+    if (typeof err === "string" && err && err !== "missing revert data") {
+      return err;
     }
   }
 
   return "Something went wrong.";
 }
 
-function collectErrorCandidates(error: unknown): unknown[] {
+function collectCustomErrors(error: unknown): unknown[] {
   const queue = [error];
   const seen = new Set<unknown>();
   const results: unknown[] = [];

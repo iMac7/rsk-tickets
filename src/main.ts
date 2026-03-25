@@ -11,13 +11,15 @@ app.innerHTML = `
           <h1 class="max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">Tickets and stuff</h1>
           <button id="connect" class="bg-amber-300 px-4 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-200">Connect wallet</button>
         </div>
-        <div class="mt-6 flex flex-col">
+        <div class="mt-6 grid gap-2 text-sm sm:grid-cols-[auto_1fr] sm:items-start sm:gap-x-4">
           <div class="text-xs uppercase tracking-[0.2em] text-stone-500">Factory</div>
-          <div id="factoryAddress" class="my-2 break-all text-stone-100"></div>
+          <div id="factoryAddress" class="break-all text-stone-100"></div>
           <div class="text-xs uppercase tracking-[0.2em] text-stone-500">RPC URL</div>
-          <div id="rpcUrl" class="my-2 break-all text-stone-100"></div>
+          <div id="rpcUrl" class="break-all text-stone-100"></div>
+          <div class="text-xs uppercase tracking-[0.2em] text-stone-500">Subgraph</div>
+          <div id="subgraphUrl" class="break-all text-stone-100"></div>
           <div class="text-xs uppercase tracking-[0.2em] text-stone-500">Account</div>
-          <div id="account" class="mt-2 break-all text-stone-100">Not connected</div>
+          <div id="account" class="break-all text-stone-100">Not connected</div>
         </div>
       </section>
 

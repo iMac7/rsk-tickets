@@ -1,4 +1,10 @@
 
+- deploy a new `TicketShop` through the `TicketShopFactory`
+- buy a ticket with `queue()`
+- finalize a purchase with `execute(purchaseId)`
+- cancel a purchase with `cancel(purchaseId)`
+
+
 ## env
 
 Create `.env` following `.env.example`.
@@ -19,12 +25,6 @@ pnpm install
 ```bash
 pnpm dev
 ```
-
-Functionality:
-- deploy a new `TicketShop` through the factory
-- buy a ticket with `queue()`
-- finalize a purchase with `execute(purchaseId)`
-- cancel a purchase with `cancel(purchaseId)`
 
 If `VITE_TESTNET_RPC_URL` is empty, the frontend automatically uses the local Hardhat RPC and default funded Hardhat account instead of prompting for a browser wallet connection.
 
