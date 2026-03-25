@@ -1,42 +1,41 @@
 specVersion: 1.3.0
+indexerHints:
+  prune: auto
 schema:
   file: ./schema.graphql
-
 dataSources:
   - kind: ethereum
     name: TicketShopFactory
-    network: rootstock
+    network: rootstock-testnet
     source:
-      address: "0xYourFactoryAddress"
+      address: "0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb"
       abi: TicketShopFactory
-      startBlock: 123456
+      startBlock: 7482612
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
-      file: ./src/factory.ts
       entities:
-        - Shop
+        - TicketShop
       abis:
         - name: TicketShopFactory
           file: ./abis/TicketShopFactory.json
       eventHandlers:
         - event: TicketShopDeployed(indexed address,indexed address,string,uint256,uint256)
           handler: handleTicketShopDeployed
-
+      file: ./src/ticket-shop-factory.ts
 templates:
-  - kind: ethereum
+  - kind: ethereum/contract
     name: TicketShop
-    network: rootstock
+    network: rootstock-testnet
     source:
       abi: TicketShop
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
-      file: ./src/shop.ts
       entities:
-        - Shop
+        - TicketShop
         - Purchase
       abis:
         - name: TicketShop
@@ -48,3 +47,4 @@ templates:
           handler: handlePurchaseFinalized
         - event: PurchaseRefunded(indexed uint256,indexed address)
           handler: handlePurchaseRefunded
+      file: ./src/ticket-shop.ts

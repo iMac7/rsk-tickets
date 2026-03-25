@@ -1,25 +1,31 @@
-type Shop @entity {
-  id: ID!                  # shop address
+type TicketShop @entity(immutable: false) {
+  id: Bytes!
   creator: Bytes!
   name: String!
   eventDate: BigInt!
   price: BigInt!
-  createdAtBlock: BigInt!
+  createdAtBlockNumber: BigInt!
   createdAtTimestamp: BigInt!
+  createdAtTransactionHash: Bytes!
   purchases: [Purchase!]! @derivedFrom(field: "shop")
 }
 
-type Purchase @entity {
-  id: ID!                  # "<shop>-<purchaseId>"
-  shop: Shop!
+type Purchase @entity(immutable: false) {
+  id: String!
+  shop: TicketShop!
   purchaseId: BigInt!
   buyer: Bytes!
   unlockTimestamp: BigInt!
-  amountPaid: BigInt
+  amountPaid: BigInt!
+  queuedBlockNumber: BigInt!
+  queuedBlockTimestamp: BigInt!
+  queuedTransactionHash: Bytes!
   finalized: Boolean!
+  finalizedBlockNumber: BigInt
+  finalizedBlockTimestamp: BigInt
+  finalizedTransactionHash: Bytes
   refunded: Boolean!
-  queuedAtBlock: BigInt!
-  queuedAtTimestamp: BigInt!
-  finalizedAtBlock: BigInt
-  refundedAtBlock: BigInt
+  refundedBlockNumber: BigInt
+  refundedBlockTimestamp: BigInt
+  refundedTransactionHash: Bytes
 }
