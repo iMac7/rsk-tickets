@@ -76,6 +76,14 @@ const state = {
   shops: [] as Shop[],
 };
 
+function formatAccountLabel(account: string) {
+  if (!account) {
+    return "Connect wallet";
+  }
+
+  return `${account.slice(0, 6)}...${account.slice(-4)}`;
+}
+
 export async function initApp() {
   const factoryAddressNode = document.querySelector<HTMLDivElement>("#factoryAddress");
   const rpcUrlNode = document.querySelector<HTMLDivElement>("#rpcUrl");
@@ -104,15 +112,27 @@ export async function initApp() {
     });
   };
 
+  const syncConnectButton = () => {
+    connectButton.textContent = USE_LOCAL_SIGNER ? "Local signer active" : formatAccountLabel(state.account);
+    connectButton.hidden = USE_LOCAL_SIGNER;
+  };
+
   factoryAddressNode.textContent = FACTORY_ADDRESS || "Missing VITE_FACTORY_ADDRESS";
   rpcUrlNode.textContent = READ_RPC_URL;
   subgraphUrlNode.textContent = USE_SUBGRAPH ? SUBGRAPH_URL! : "Disabled";
-  connectButton.textContent = USE_LOCAL_SIGNER ? "Local signer active" : "Connect wallet";
-  connectButton.hidden = USE_LOCAL_SIGNER;
+  syncConnectButton();
 
   connectButton.addEventListener("click", async () => {
     try {
+      if (state.account) {
+        disconnectWallet(accountNode);
+        syncConnectButton();
+        await loadShops(shopsNode);
+        return;
+      }
+
       await connectWallet(accountNode);
+      syncConnectButton();
       await loadShops(shopsNode);
     } catch (error) {
       console.error(error);
@@ -174,6 +194,7 @@ export async function initApp() {
   });
 
   await initializeAccount(accountNode);
+  syncConnectButton();
   await loadShops(shopsNode);
 }
 
@@ -215,6 +236,15 @@ async function connectWallet(accountNode: HTMLDivElement) {
   const accounts = (await provider.send("eth_requestAccounts", [])) as string[];
   state.account = String(accounts[0] || "");
   accountNode.textContent = state.account || "Not connected";
+}
+
+function disconnectWallet(accountNode: HTMLDivElement) {
+  if (USE_LOCAL_SIGNER) {
+    return;
+  }
+
+  state.account = "";
+  accountNode.textContent = "Not connected";
 }
 
 async function initializeAccount(accountNode: HTMLDivElement) {
