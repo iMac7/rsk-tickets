@@ -1,8 +1,9 @@
 
+- deploy `TicketShopFactory` contract 
 - deploy a new `TicketShop` through the `TicketShopFactory`
-- buy a ticket with `queue()`
-- finalize a purchase with `execute(purchaseId)`
-- cancel a purchase with `cancel(purchaseId)`
+- buy a ticket with `queue()` before event starts
+- refund a queued purchase with `cancel(purchaseId)` before event starts
+- finalize a purchase with `execute(purchaseId)` after the event has started
 
 
 ## env
