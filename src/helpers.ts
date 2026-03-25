@@ -150,9 +150,18 @@ export async function initApp() {
 
     await runAction(
       async () => {
+        console.log('before factory');
+        
         const factory = await getFactory(true);
+        console.log('factory= ', factory, );
+        
         const tx = await factory.deployTicketShop(name, Math.floor(eventTimestamp / 1000), parseEther(price));
+        console.log('tx= ', tx, 'timestamp= ', eventTimestamp, tx.hash)
+
         await tx.wait();
+        console.log('after wait');
+        
+
         deployForm.reset();
         setValidation();
         await loadShops(shopsNode);
@@ -236,7 +245,7 @@ async function getFactory(withSigner = false) {
 
 async function loadShops(shopsNode: HTMLDivElement) {
   if (!FACTORY_ADDRESS) {
-    renderShops(shopsNode);
+    await renderShops(shopsNode);
     return;
   }
 
@@ -265,6 +274,26 @@ async function loadShops(shopsNode: HTMLDivElement) {
   )
     .reverse();
 
+    console.log('shops=> ', state.shops);
+    //on my console,
+    //  shops=>  
+    // [{…}]
+    // 0
+    // : 
+    // address
+    // : 
+    // "0x5aB63294dE2F21a80030d65be030FB86D8Bc7baf"
+    // eventDate
+    // : 
+    // 1774429935n
+    // name
+    // : 
+    // "randomshop"
+    // price
+    // : 
+    // 10000n
+    
+
   await renderShops(shopsNode);
 }
 
@@ -281,25 +310,36 @@ async function renderShops(shopsNode: HTMLDivElement) {
   const provider = getReadProvider();
   const readonlyAccount = state.account || "0x0000000000000000000000000000000000000000";
 
-  const details = provider
-    ? await Promise.all(
-        state.shops.map(async (shop) => {
-          const contract = new Contract(shop.address, shopAbi, provider);
-          const [rawState, activeTickets, ticketsSold] = await Promise.all([
-            contract.state() as Promise<bigint>,
-            contract.activeTickets(readonlyAccount) as Promise<bigint>,
-            getOpenTicketCount(contract),
-          ]);
+  const details = await Promise.all(
+    state.shops.map(async (shop) => {
+      const derivedStateLabel = Number(shop.eventDate) * 1000 > Date.now() ? "Sales open" : "Event started";
 
-          return {
-            ...shop,
-            stateLabel: Number(rawState) === 0 ? "Sales open" : "Event started",
-            activeTickets,
-            ticketsSold,
-          };
-        }),
-      )
-    : state.shops.map((shop) => ({ ...shop, stateLabel: "Wallet required", activeTickets: 0n, ticketsSold: 0 }));
+      try {
+        const contract = new Contract(shop.address, shopAbi, provider);
+        const [rawState, activeTickets, ticketsSold] = await Promise.all([
+          contract.state() as Promise<bigint>,
+          contract.activeTickets(readonlyAccount) as Promise<bigint>,
+          getOpenTicketCount(contract),
+        ]);
+
+        return {
+          ...shop,
+          stateLabel: Number(rawState) === 0 ? "Sales open" : "Event started",
+          activeTickets,
+          ticketsSold,
+        };
+      } catch (error) {
+        console.error(`Failed to load shop details for ${shop.address}`, error);
+
+        return {
+          ...shop,
+          stateLabel: derivedStateLabel,
+          activeTickets: 0n,
+          ticketsSold: 0,
+        };
+      }
+    }),
+  );
 
   shopsNode.innerHTML = details
     .map(

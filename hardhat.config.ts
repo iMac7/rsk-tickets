@@ -19,8 +19,8 @@ export default defineConfig({
     testnet: {
       type: "http",
       chainType: "l1",
-      url: configVariable("VITE_TESTNET_RPC_URL"),
-      accounts: [configVariable("DEPLOYER_PRIVATE_KEY")],
+      url: 'https://public-node.testnet.rsk.co',
+      accounts: [configVariable("VITE_DEPLOYER_PRIVATE_KEY")],
     },
   },
 });

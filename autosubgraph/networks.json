@@ -1,0 +1,8 @@
+{
+  "rootstock-testnet": {
+    "TicketShopFactory": {
+      "address": "0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb",
+      "startBlock": 7482612
+    }
+  }
+}

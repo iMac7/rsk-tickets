@@ -6,8 +6,6 @@ Create `.env` following `.env.example`.
 ```bash
 VITE_FACTORY_ADDRESS=0x...
 VITE_TESTNET_RPC_URL=
-VITE_LOCAL_RPC_URL=http://127.0.0.1:8545
-VITE_LOCAL_PRIVATE_KEY=0xac0974...
 ```
 
 ## Install
@@ -54,9 +52,25 @@ OR
 yarn hardhat deploy
 ```
 
+### Interact with contract (hardhat)
+```bash
+pnpm hardhat console --network testnet
+
+> const { ethers } = await hre.network.connect();
+undefined
+> ethers.provider
+HardhatEthersProvider {}
+> await ethers.provider.getBlockNumber()
+7485089
+
+const factoryContract = new ethers.Contract(factoryAddress, factoryAbi, signer);
+const tx = await factoryContract.deployTicketShop("randomshop", 1774429935, 10000);
+
+```
+
 
 #### Addresses
-Deployer proxy - [0x7d08812cba7840e67a45246bf6e5e3507e303bb1](https://explorer.testnet.rootstock.io/address/0x7d08812cba7840e67a45246bf6e5e3507e303bb1)
+Deployer proxy - [0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb](https://explorer.testnet.rootstock.io/address/0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb)
 
 `TODO:`
 redeploy factory with ticketshop records
