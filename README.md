@@ -10,6 +10,39 @@
 - refund a queued purchase with `cancel(purchaseId)` before event starts
 - finalize a purchase with `execute(purchaseId)` after the event has started
 
+## Tech stack, tools and decisions
+
+#### Frontend
+- Fetches live data from a subgraph (`subgraph` folder), subgraph url configured in .env
+- Tech stack - vite, vanilla typescript. This avoids too many dependencies.
+- [Deployed on replit](https://rsk-tickets--ianmash.replit.app/)
+
+#### Smart Contracts (`contracts` folder)
+- Made with solidity, compiled and tested with hardhat
+- There are 2 contracts involved - `TicketShopFactory` contract and `TicketShop` contract.
+
+##### TicketShopFactory
+- This is just a proxy contract for deploying the `TicketShop` contract.
+- It also keeps track of deployed contract addresses for easier discovery onchain (of course an indexer will do this better)
+
+##### TicketShop
+- This holds the main logic of the dApp
+- It is an implementation of the timelock pattern, which is a specialized time-based variation of a state machine pattern
+- It emits appropriate events for easy indexing and follows the CEI pattern to guard against reentrancy
+
+##### Subgraph (`subgraph` folder)
+- An indexer is needed for faster and cleaner querying instead of querying smart contract state from the RPC directly
+- The Graph indexer was chosen because of its simplicity and compatibility with rootstock.
+
+
+#### Hardhat
+Chosen for simplicity and wide compatibility with already-present typescript tools.
+It handles:
+- local and testnet deployments
+- testing
+- contract interactions
+
+
 ## Set up environment variables
 Create `.env` following `.env.example`.
 ```bash
