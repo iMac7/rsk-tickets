@@ -12,12 +12,12 @@
 
 ## Tech stack, tools and decisions
 
-#### Frontend
+### Frontend
 - Fetches live data from a subgraph (`subgraph` folder), subgraph url configured in .env
 - Tech stack - vite, vanilla typescript. This avoids too many dependencies.
 - [Deployed on replit](https://rsk-tickets--ianmash.replit.app/)
 
-#### Smart Contracts (`contracts` folder)
+### Smart Contracts (`contracts` folder)
 - Made with solidity, compiled and tested with hardhat
 - There are 2 contracts involved - `TicketShopFactory` contract and `TicketShop` contract.
 
@@ -30,12 +30,12 @@
 - It is an implementation of the timelock pattern, which is a specialized time-based variation of a state machine pattern
 - It emits appropriate events for easy indexing and follows the CEI pattern to guard against reentrancy
 
-##### Subgraph (`subgraph` folder)
+### Subgraph (`subgraph` folder)
 - An indexer is needed for faster and cleaner querying instead of querying smart contract state from the RPC directly
 - The Graph indexer was chosen because of its simplicity and compatibility with rootstock.
 
 
-#### Hardhat
+### Hardhat
 Chosen for simplicity and wide compatibility with already-present typescript tools.
 It handles:
 - local and testnet deployments
