@@ -1,4 +1,7 @@
-## Time-based ticket release dApp
+# Time-based ticket release dApp
+
+![App](public/app.png)
+
 
 ## Use the app
 - deploy `TicketShopFactory` contract 
@@ -7,11 +10,8 @@
 - refund a queued purchase with `cancel(purchaseId)` before event starts
 - finalize a purchase with `execute(purchaseId)` after the event has started
 
-
 ## Set up environment variables
-
 Create `.env` following `.env.example`.
-
 ```bash
 VITE_FACTORY_ADDRESS=0x...
 VITE_TESTNET_RPC_URL=
@@ -19,21 +19,20 @@ VITE_SUBGRAPH_URL=
 VITE_DEPLOYER_PRIVATE_KEY=<use with hardhat deploy script in `scripts/deploy.ts`>
 ```
 
-## Install
-
+## Run frontend
+Install dependencies
 ```bash
 pnpm install
 ```
 
-## Run frontend
-
+Start development server
 ```bash
 pnpm dev
 ```
 
 If `VITE_TESTNET_RPC_URL` is empty, the frontend automatically uses the local Hardhat RPC and a default wallet.
 
-## Hardhat 3
+## Hardhat commands
 
 Compile
 ```bash
@@ -55,7 +54,7 @@ Run tests - executes the tests in `contracts/Tickets.t.sol`
 pnpm hardhat test
 ```
 
-### Example ontract operations (hardhat console)
+### Example contract operations (hardhat console)
 ```bash
 pnpm hardhat console --network testnet
 ```
@@ -72,7 +71,6 @@ HardhatEthersProvider {}
 const factoryContract = new ethers.Contract(factoryAddress, factoryAbi, signer);
 const tx = await factoryContract.deployTicketShop("randomshop", 1774429935, 10000);
 ```
-
 
 #### Addresses
 Deployer proxy - [0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb](https://explorer.testnet.rootstock.io/address/0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb)
