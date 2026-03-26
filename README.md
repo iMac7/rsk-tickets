@@ -35,28 +35,33 @@ If `VITE_TESTNET_RPC_URL` is empty, the frontend automatically uses the local Ha
 
 ## Hardhat 3
 
-Compile:
-
+Compile
 ```bash
 pnpm compile
 ```
 
-Run a local hardhat node:
-
+Run a local hardhat node
 ```bash
 pnpm node
 ```
 
-Deploy locally:
-
+Deploy locally
 ```bash
 pnpm deploy --network localhost
+```
+
+Run tests - executes the tests in `contracts/Tickets.t.sol`
+```
+pnpm hardhat test
 ```
 
 ### Example ontract operations (hardhat console)
 ```bash
 pnpm hardhat console --network testnet
+```
 
+Use the hardhat console REPL
+```javascript
 > const { ethers } = await hre.network.connect();
 undefined
 > ethers.provider
@@ -66,7 +71,6 @@ HardhatEthersProvider {}
 
 const factoryContract = new ethers.Contract(factoryAddress, factoryAbi, signer);
 const tx = await factoryContract.deployTicketShop("randomshop", 1774429935, 10000);
-
 ```
 
 
