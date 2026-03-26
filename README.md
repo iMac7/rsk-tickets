@@ -1,4 +1,6 @@
+## Time-based ticket release dApp
 
+## Use the app
 - deploy `TicketShopFactory` contract 
 - deploy a new `TicketShop` through the `TicketShopFactory`
 - buy a ticket with `queue()` before event starts
@@ -72,7 +74,3 @@ const tx = await factoryContract.deployTicketShop("randomshop", 1774429935, 1000
 
 #### Addresses
 Deployer proxy - [0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb](https://explorer.testnet.rootstock.io/address/0x730CF5DDf1799754Ac0B54c308AA52bA2B706cAb)
-
-`TODO:`
-redeploy factory with ticketshop records
-frontend works with hardhat, mmoving to testnet
