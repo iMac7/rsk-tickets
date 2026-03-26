@@ -8,13 +8,15 @@
 - finalize a purchase with `execute(purchaseId)` after the event has started
 
 
-## env
+## Set up environment variables
 
 Create `.env` following `.env.example`.
 
 ```bash
 VITE_FACTORY_ADDRESS=0x...
 VITE_TESTNET_RPC_URL=
+VITE_SUBGRAPH_URL=
+VITE_DEPLOYER_PRIVATE_KEY=<use with hardhat deploy script in `scripts/deploy.ts`>
 ```
 
 ## Install
@@ -29,7 +31,7 @@ pnpm install
 pnpm dev
 ```
 
-If `VITE_TESTNET_RPC_URL` is empty, the frontend automatically uses the local Hardhat RPC and default funded Hardhat account instead of prompting for a browser wallet connection.
+If `VITE_TESTNET_RPC_URL` is empty, the frontend automatically uses the local Hardhat RPC and a default wallet.
 
 ## Hardhat 3
 
@@ -50,12 +52,8 @@ Deploy locally:
 ```bash
 pnpm deploy --network localhost
 ```
-OR
-```bash
-yarn hardhat deploy
-```
 
-### Interact with contract (hardhat)
+### Example ontract operations (hardhat console)
 ```bash
 pnpm hardhat console --network testnet
 
